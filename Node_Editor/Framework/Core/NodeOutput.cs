@@ -2,28 +2,31 @@
 using UnityEngine.Serialization;
 using System;
 using System.Collections.Generic;
+using System.Xml.Serialization;
 
 namespace NodeEditorFramework 
 {
-	/// <summary>
-	/// Node output accepts multiple connections to NodeInputs by default
-	/// </summary>
-	public partial class NodeOutput : NodeKnob
-	{
-		// NodeKnob Members
-		protected override NodeSide defaultSide { get { return NodeSide.Right; } }
-		private static GUIStyle _defaultStyle;
-		protected override GUIStyle defaultLabelStyle { get { if (_defaultStyle == null) { _defaultStyle = new GUIStyle (GUI.skin.label); _defaultStyle.alignment = TextAnchor.MiddleRight; } return _defaultStyle; } }
+    /// <summary>
+    /// Node output accepts multiple connections to NodeInputs by default
+    /// </summary>
+    public partial class NodeOutput : NodeKnob
+    {
+        // NodeKnob Members
+        protected override NodeSide defaultSide { get { return NodeSide.Right; } }
+        private static GUIStyle _defaultStyle;
+        protected override GUIStyle defaultLabelStyle { get { if (_defaultStyle == null) { _defaultStyle = new GUIStyle(GUI.skin.label); _defaultStyle.alignment = TextAnchor.MiddleRight; } return _defaultStyle; } }
 
-		// NodeInput Members
+        // NodeInput Members
+        [XmlIgnore]
 		public List<NodeInput> connections = new List<NodeInput> ();
+        [XmlIgnore]
 		[FormerlySerializedAs("type")]
 		public string typeID;
 		private TypeData _typeData;
 		internal TypeData typeData { get { CheckType (); return _typeData; } }
 		[System.NonSerialized]
 		private object value = null;
-
+        [XmlIgnore]
 		public bool calculationBlockade = false;
 
 		#region General
@@ -53,6 +56,7 @@ namespace NodeEditorFramework
 			output.typeID = outputType;
 			output.InitBase (nodeBody, nodeSide, sidePosition, outputName);
 			nodeBody.Outputs.Add (output);
+            NodeEditorCallbacks.IssueOnAddNodeKnob(output);
 			return output;
 		}
 

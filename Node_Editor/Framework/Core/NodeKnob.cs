@@ -3,6 +3,7 @@ using System.Linq;
 using System.Collections.Generic;
 
 using NodeEditorFramework.Utilities;
+using System.Xml.Serialization;
 
 namespace NodeEditorFramework 
 {
@@ -15,10 +16,20 @@ namespace NodeEditorFramework
 	/// Abstract knob on the side of an node that handles positioning drawing with a texture and even labeling and positioning calls
 	/// </summary>
 	[System.Serializable]
-	public partial class NodeKnob : ScriptableObject
+    [XmlInclude(typeof(NodeInput))]
+    [XmlInclude(typeof(NodeOutput))]
+    public partial class NodeKnob : ScriptableObject
 	{
 		// Main
+        [XmlIgnore]
 		public Node body;
+
+        //[XmlAttribute("id")]
+        public string id
+        {
+            get { return body.fullId + "|" + name + ":" + body.nodeKnobs.IndexOf(this); }
+            set { }
+        }
 
 		protected virtual GUIStyle defaultLabelStyle { get { return GUI.skin.label; } }
 		[System.NonSerialized]
@@ -26,9 +37,12 @@ namespace NodeEditorFramework
 		
 		// Position
 		protected virtual NodeSide defaultSide { get { return NodeSide.Right; } }
-		public NodeSide side;
-		public float sidePosition = 0; // Position on the side, top->bottom, left->right
-		public float sideOffset = 0; // Offset from the side
+        [XmlIgnore]
+        public NodeSide side;
+        [XmlIgnore]
+        public float sidePosition = 0; // Position on the side, top->bottom, left->right
+        [XmlIgnore]
+        public float sideOffset = 0; // Offset from the side
 
 		/// <summary>
 		/// Inits the base node and subscribes it in the node body for drawing and requests to load the texture through 'ReloadTexture'
@@ -39,6 +53,7 @@ namespace NodeEditorFramework
 			side = nodeSide;
 			sidePosition = nodeSidePosition;
 			name = knobName;
+            //ID = nodeBody.GetID + ":" + nodeBody.GetInstanceID() + "|" + name + ":" + nodeBody.nodeKnobs.Count;
 			nodeBody.nodeKnobs.Add (this);
 			ReloadKnobTexture ();
 		}

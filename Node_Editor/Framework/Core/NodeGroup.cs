@@ -49,6 +49,8 @@ namespace NodeEditorFramework
 		private Rect headerRect { get { return new Rect (rect.x, rect.y - (headerFree? headerHeight : 0), rect.width, headerHeight); } }
 		private Rect bodyRect { get { return new Rect (rect.x, rect.y + (headerFree? 0 : headerHeight), rect.width, rect.height - (headerFree? 0 : headerHeight)); } }
 
+        public NodeGroup() { }
+
 		/// <summary>
 		/// Creates a new NodeGroup with the specified title at pos and adds it to the current canvas
 		/// </summary>

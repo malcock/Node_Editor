@@ -232,7 +232,12 @@ namespace NodeEditorFramework.Standard
 				menu.AddSeparator("");
 				menu.AddItem(new GUIContent("Save Canvas"), false, SaveCanvas);
 				menu.AddItem(new GUIContent("Save Canvas As"), false, SaveCanvasAs);
-				menu.AddSeparator("");
+
+                menu.AddSeparator("");
+                menu.AddItem(new GUIContent("Save Xml"), false, SaveXml);
+                menu.AddItem(new GUIContent("Load Xml"), false, LoadXml);
+                menu.AddSeparator("");
+                
 
 				// Scene Saving
 				foreach (string sceneSave in NodeEditorSaveManager.GetSceneSaves())
@@ -243,9 +248,11 @@ namespace NodeEditorFramework.Standard
 				menu.AddItem( new GUIContent("Save Canvas to Scene"), false, () => showModalPanel = true);
 
 				menu.DropDown (new Rect (5, toolbarHeight, 0, 0));
-			}
 
-			if (GUILayout.Button("Debug", EditorStyles.toolbarDropDown, GUILayout.Width(50)))
+
+            }
+
+            if (GUILayout.Button("Debug", EditorStyles.toolbarDropDown, GUILayout.Width(50)))
 			{
 				GenericMenu menu = new GenericMenu();
 
@@ -434,6 +441,18 @@ namespace NodeEditorFramework.Standard
 			if (!string.IsNullOrEmpty (path))
 				canvasCache.SaveNodeCanvas (path);
 		}
+
+        private void SaveXml()
+        {
+            canvasCache.SaveXml(Application.dataPath + "/hello.xml");
+            //NodeEditorSaveManager.SaveXml(Application.dataPath + "/hello.xml", ref canvasCache.nodeCanvas);
+        }
+
+        private void LoadXml()
+        {
+            canvasCache.LoadXml(Application.dataPath + "/hello.xml");
+            //NodeEditorSaveManager.LoadXml(Application.dataPath + "/hello.xml", ref canvasCache.nodeCanvas);
+        }
 
 		public void LoadSceneCanvasCallback (object canvas) 
 		{

@@ -4,6 +4,9 @@ using System.Linq;
 using System.Collections.Generic;
 
 using NodeEditorFramework.Utilities;
+using System.Xml.Serialization;
+using System.Reflection;
+using NodeEditorFramework.RealTime;
 
 namespace NodeEditorFramework
 {
@@ -11,26 +14,51 @@ namespace NodeEditorFramework
 	{
 		public virtual Vector2 MinSize { get { return new Vector2(); } }
 		public virtual bool Resizable { get { return false; } } // set to false to avoid breaking existing nodes
+        [XmlIgnore]
 		public Rect rect = new Rect ();
+        private Vector2 _position = new Vector2();
+        public Vector2 position
+        {
+            get
+            {
+                _position = rect.position;
+                return _position;
+            }
+            set
+            {
+                rect.position = value;
+            }
+        }
 
 		internal Vector2 contentOffset = Vector2.zero;
 		internal Vector2 resizeToPosition;
 
+        //[XmlIgnore]
+        
 		[SerializeField]
 		public List<NodeKnob> nodeKnobs = new List<NodeKnob> ();
 
 		// Calculation graph
+        [XmlIgnore]
 		[SerializeField]
 		public List<NodeInput> Inputs = new List<NodeInput>();
+        [XmlIgnore]
 		[SerializeField]
 		public List<NodeOutput> Outputs = new List<NodeOutput>();
 		[HideInInspector]
 		[NonSerialized]
 		internal bool calculated = true;
-
+        [XmlIgnore]
 		public Color backgroundColor = Color.white;
 		private Color lastBGColor = Color.white;
 		private GUIStyle nodeBGStyle;
+
+        private string _fullId;
+        [XmlAttribute("id")]
+        public string fullId
+        {
+            get { return GetID + ":" + GetInstanceID(); }
+        }
 
 		#region General
 
@@ -47,6 +75,8 @@ namespace NodeEditorFramework
 				name = UnityEditor.ObjectNames.NicifyVariableName (GetID);
 			#endif
 			NodeEditor.RepaintClients ();
+
+            //fullId = GetID + ":" + GetInstanceID();
 		}
 
 		/// <summary>
@@ -218,14 +248,20 @@ namespace NodeEditorFramework
 		/// </summary>
 		protected internal virtual void CopyScriptableObjects (System.Func<ScriptableObject, ScriptableObject> replaceSO) {}
 
-		#endregion
+        #endregion
 
-		#endregion
+        #endregion
 
-		#region Drawing
+        #region Realtime
+
+        protected internal virtual void CreateUI(RTNode panel) { }
+
+        #endregion
+
+        #region Drawing
 
 #if UNITY_EDITOR
-		public virtual void OnSceneGUI()
+        public virtual void OnSceneGUI()
 		{
 
 		}
@@ -612,9 +648,91 @@ namespace NodeEditorFramework
 			EndRecursiveSearchLoop ();
 		}
 
-		#region Recursive Search Helpers
+        public void CopyProperties(object source)
+        {
+            object destination = this;
+            // If any this null throw an exception
+            if (source == null || destination == null)
+                throw new Exception("Source or/and Destination Objects are null");
+            // Getting the Types of the objects
+            Type typeDest = destination.GetType();
+            Type typeSrc = source.GetType();
 
-		[NonSerialized] private List<Node> recursiveSearchSurpassed;
+            // Iterate the Properties of the source instance and  
+            // populate them from their desination counterparts  
+            PropertyInfo[] srcProps = typeSrc.GetProperties();
+            foreach (PropertyInfo srcProp in srcProps)
+            {
+                if (!srcProp.CanRead)
+                {
+                    continue;
+                }
+                PropertyInfo targetProperty = typeDest.GetProperty(srcProp.Name);
+                if (targetProperty == null)
+                {
+                    continue;
+                }
+                if (!targetProperty.CanWrite)
+                {
+                    continue;
+                }
+                if (targetProperty.GetSetMethod(true) != null && targetProperty.GetSetMethod(true).IsPrivate)
+                {
+                    continue;
+                }
+                if ((targetProperty.GetSetMethod().Attributes & MethodAttributes.Static) != 0)
+                {
+                    continue;
+                }
+                if (!targetProperty.PropertyType.IsAssignableFrom(srcProp.PropertyType))
+                {
+                    continue;
+                }
+                if(targetProperty.PropertyType==typeof(NodeKnob) && targetProperty.PropertyType.IsSubclassOf(typeof(NodeKnob)) ){
+                    continue;
+                }
+                // Passed all tests, lets set the value
+                targetProperty.SetValue(destination, srcProp.GetValue(source, null), null);
+            }
+
+            // Iterate the Properties of the source instance and  
+            // populate them from their desination counterparts  
+            FieldInfo[] srcFields = typeSrc.GetFields(BindingFlags.Public | BindingFlags.Instance);
+            foreach (FieldInfo srcField in srcFields)
+            {
+                FieldInfo targetField = typeDest.GetField(srcField.Name);
+                if (targetField == null)
+                {
+                    continue;
+                }
+                if (targetField.IsPrivate)
+                {
+                    continue;
+                }
+                if(!targetField.FieldType.IsAssignableFrom(srcField.FieldType))
+                {
+                    continue;
+                }
+                if (targetField.FieldType == typeof(NodeKnob) || targetField.FieldType.IsSubclassOf(typeof(NodeKnob)))
+                {
+                    continue;
+                }
+                if(targetField.FieldType.IsGenericType || targetField.FieldType.IsArray)
+                {
+                    continue;
+                }
+                if (targetField.Name == "rect")
+                {
+                    continue;
+                }
+                // Passed all tests, lets set the value
+                targetField.SetValue(destination, targetField.GetValue(source));
+            }
+        }
+
+        #region Recursive Search Helpers
+
+        [NonSerialized] private List<Node> recursiveSearchSurpassed;
 		[NonSerialized] private Node startRecursiveSearchNode; // Temporary start node for recursive searches
 
 		/// <summary>
@@ -655,8 +773,10 @@ namespace NodeEditorFramework
 			startRecursiveSearchNode = null;
 		}
 
-		#endregion
+        #endregion
 
-		#endregion
-	}
+        #endregion
+
+        
+    }
 }

@@ -5,6 +5,8 @@ using System.Collections.Generic;
 
 using NodeEditorFramework;
 using NodeEditorFramework.Utilities;
+using System.Xml;
+using System.Xml.Serialization;
 
 namespace NodeEditorFramework 
 {
@@ -581,6 +583,61 @@ namespace NodeEditorFramework
 		#endif
 		}
 
-		#endregion
-	}
+        #endregion
+
+
+        #region XmlSaving
+
+        public static void SaveXml(string path, ref NodeCanvas canvas)
+        {
+            XmlDocument doc = new XmlDocument();
+            XmlElement root = doc.CreateElement("canvas");
+            doc.AppendChild(root);
+            XmlAttribute canvasType = doc.CreateAttribute("type");
+            canvasType.Value = canvas.GetType().ToString();
+            root.Attributes.Append(canvasType);
+            XmlElement nodes = doc.CreateElement("nodes");
+
+            for(int i = 0; i < canvas.nodes.Count; i++)
+            {
+                Node n = canvas.nodes[i];
+                XmlSerializer s = new XmlSerializer(n.GetType());
+                StringWriter sW = new StringWriter();
+                XmlWriter xW = XmlWriter.Create(sW);
+
+                s.Serialize(xW, n);
+
+                XmlDocument nDoc = new XmlDocument();
+                nDoc.LoadXml(sW.ToString());
+                XmlNode nNode = doc.DocumentElement.OwnerDocument.ImportNode(nDoc.DocumentElement, true);
+
+                XmlAttribute nType = doc.CreateAttribute("type");
+                nType.Value = n.GetType().ToString();
+                nNode.Attributes.Append(nType);
+                nodes.AppendChild(nNode);
+            }
+            root.AppendChild(nodes);
+            StringWriter sw1 = new StringWriter();
+            XmlTextWriter xmlWr0 = new XmlTextWriter(sw1);
+            xmlWr0.Formatting = Formatting.Indented;
+            doc.WriteTo(xmlWr0);
+
+            doc.Save(path);
+
+            sw1.Close();
+            xmlWr0.Close();
+        }
+
+        public static void LoadXml(string path, ref NodeCanvas canvas)
+        {
+            XmlDocument doc = new XmlDocument();
+            doc.Load(path);
+
+            canvas = NodeCanvas.CreateCanvas(System.Type.GetType(doc.Attributes["type"].ToString()));
+
+            
+        }
+
+        #endregion
+    }
 }

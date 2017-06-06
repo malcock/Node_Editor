@@ -2,6 +2,7 @@
 using UnityEngine.Serialization;
 using System;
 using System.Collections.Generic;
+using System.Xml.Serialization;
 
 namespace NodeEditorFramework
 {
@@ -14,8 +15,10 @@ namespace NodeEditorFramework
 		protected override NodeSide defaultSide { get { return NodeSide.Left; } }
 
 		// NodeInput Members
+        
 		public NodeOutput connection;
-		[FormerlySerializedAs("type")]
+        [XmlIgnore]
+        [FormerlySerializedAs("type")]
 		public string typeID;
 		private TypeData _typeData;
 		internal TypeData typeData { get { CheckType (); return _typeData; } }
@@ -49,6 +52,7 @@ namespace NodeEditorFramework
 			input.typeID = inputType;
 			input.InitBase (nodeBody, nodeSide, sidePosition, inputName);
 			nodeBody.Inputs.Add (input);
+            NodeEditorCallbacks.IssueOnAddNodeKnob(input);
 			return input;
 		}
 

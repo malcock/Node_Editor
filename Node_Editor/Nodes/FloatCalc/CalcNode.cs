@@ -2,6 +2,8 @@
 using System.Collections;
 using NodeEditorFramework;
 using NodeEditorFramework.Utilities;
+using NodeEditorFramework.RealTime;
+using System;
 
 namespace NodeEditorFramework.Standard
 {
@@ -68,7 +70,21 @@ namespace NodeEditorFramework.Standard
 				NodeEditor.curNodeCanvas.OnNodeChange (this);
 		}
 
-		public override bool Calculate () 
+        protected internal override void CreateUI(RTNode panel)
+        {
+            GameObject h1 = NodeEditorUI.VerticalGroup();
+            GameObject val1 = NodeEditorUI.InputField();
+            GameObject val2 = NodeEditorUI.InputField();
+            val1.transform.parent = h1.transform;
+            val2.transform.parent = h1.transform;
+            GameObject output = NodeEditorUI.Label("output");
+            GameObject h2 = NodeEditorUI.VerticalGroup();
+            output.transform.parent = h2.transform;
+            h1.transform.parent = panel.content;
+            h2.transform.parent = panel.content;
+        }
+
+        public override bool Calculate () 
 		{
 			if (Inputs[0].connection != null)
 				Input1Val = Inputs[0].connection.GetValue<float> ();

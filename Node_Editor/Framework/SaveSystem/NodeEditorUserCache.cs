@@ -8,6 +8,9 @@ using UnityEngine;
 
 using NodeEditorFramework;
 using NodeEditorFramework.Utilities;
+using System.Xml;
+using System.Xml.Serialization;
+using System.Linq;
 
 namespace NodeEditorFramework
 {
@@ -420,6 +423,149 @@ namespace NodeEditorFramework
 		{
 			typeData = NodeCanvasManager.getCanvasTypeData (nodeCanvas);
 		}
-	}
+
+        #region XmlSaving
+
+        public void LoadXml(string path)
+        {
+            Dictionary<string, Node> NodeList = new Dictionary<string, Node>();
+            Dictionary<string, NodeKnob> KnobList = new Dictionary<string, NodeKnob>();
+
+            XmlDocument doc = new XmlDocument();
+            doc.Load(path);
+            NewNodeCanvas(Type.GetType(doc.DocumentElement.Attributes["type"].Value));
+
+            XmlNode nodelist = doc.GetElementsByTagName("nodes")[0];
+
+            List<Node> nodes = new List<Node>();
+            for (int i = 0; i < nodelist.ChildNodes.Count; i++)
+            {
+                XmlNode n = nodelist.ChildNodes[i];
+                XmlAttribute id = n.Attributes["id"];
+                XmlAttribute type = n.Attributes["type"];
+                XmlSerializer s = new XmlSerializer(Type.GetType(type.Value));
+
+                Node copyNode = s.Deserialize(new StringReader(n.OuterXml)) as Node;
+
+                Node newNode = Node.Create(id.Value.Split(':')[0],copyNode.position);
+
+                newNode.CopyProperties(copyNode);
+                NodeList.Add(id.Value, newNode);
+            }
+
+            //XmlSerializer s = new XmlSerializer(Type.GetType(doc.DocumentElement.Attributes["type"].Value));
+            //nodeCanvas = (NodeCanvas)s.Deserialize(new StreamReader(path));
+            Debug.Log("nodes loaded: " + nodeCanvas.nodes.Count);
+
+            for(int i = 0; i < nodelist.ChildNodes.Count; i++)
+            {
+                XmlNode knobs = nodelist.ChildNodes[i].SelectSingleNode("nodeKnobs");
+
+                foreach(XmlNode knob in knobs)
+                {
+                    if (knob.Attributes["xsi:type"].Value == "NodeInput")
+                    {
+                        if (knob.SelectSingleNode("connection") != null)
+                        {
+                            //do a thing to connect them
+                            string[] inputId = knob.SelectSingleNode("id").InnerText.Split('|');
+                            string[] outputId = knob.SelectSingleNode("connection").SelectSingleNode("id").InnerText.Split('|');
+                            int inputKnobId = int.Parse(inputId[1].Split(':')[1]);
+                            int outputKnobId = int.Parse(outputId[1].Split(':')[1]);
+
+                            NodeInput inputKnob = (NodeInput)NodeList[inputId[0]].nodeKnobs[inputKnobId];
+                            NodeOutput outputKnob = (NodeOutput)NodeList[outputId[0]].nodeKnobs[outputKnobId];
+                            inputKnob.ApplyConnection(outputKnob);
+                        }
+                    }
+                }
+
+            }
+        }
+
+
+
+        public void SaveXml(string path)
+        {
+            Dictionary<Node, string> NodeList = new Dictionary<Node, string>();
+            Dictionary<NodeKnob, string> KnobList = new Dictionary<NodeKnob, string>();
+
+            //create IDs for nodes and knobs
+            
+            for (int t = 0; t < nodeCanvas.nodes.Count; t++)
+            {
+                Node n = nodeCanvas.nodes[t];
+                NodeList.Add(n, n.GetID + ":" + t);
+                int knobIndex = 0;
+                for (int kN = 0; kN < n.nodeKnobs.Count; kN++)
+                {
+                    NodeKnob k = n.nodeKnobs[kN];
+
+                    KnobList.Add(k, NodeList[n] + "|" + k.name + ":" + kN);
+                    knobIndex++;
+                }
+                
+            }
+
+            XmlDocument doc = new XmlDocument();
+            XmlElement root = doc.CreateElement("canvas");
+            doc.AppendChild(root);
+            XmlAttribute canvasType = doc.CreateAttribute("type");
+            canvasType.Value = nodeCanvas.GetType().ToString();
+            root.Attributes.Append(canvasType);
+            XmlElement nodes = doc.CreateElement("nodes");
+
+            for (int i = 0; i < nodeCanvas.nodes.Count; i++)
+            {
+                Node n = nodeCanvas.nodes[i];
+                XmlSerializer s = new XmlSerializer(n.GetType());
+                StringWriter sW = new StringWriter();
+                XmlWriter xW = XmlWriter.Create(sW);
+
+                s.Serialize(xW, n);
+
+                XmlDocument nDoc = new XmlDocument();
+                nDoc.LoadXml(sW.ToString());
+                XmlNode nNode = doc.DocumentElement.OwnerDocument.ImportNode(nDoc.DocumentElement, true);
+
+                XmlAttribute nType = doc.CreateAttribute("type");
+                nType.Value = n.GetType().ToString();
+                nNode.Attributes.Append(nType);
+
+                XmlAttribute nId = doc.CreateAttribute("id");
+                nId.Value = n.fullId;
+                nNode.Attributes.Append(nId);
+
+
+                //XmlElement connections = doc.CreateElement("connections");
+                ////find all inputs that have connections
+                //foreach (NodeInput input in n.Inputs.Where(x => x.connection != null))
+                //{
+
+                //    XmlElement activeInput = doc.CreateElement("input");
+                //    XmlAttribute kId = doc.CreateAttribute("id");
+                //    kId.Value = KnobList[input];
+                //    activeInput.Attributes.Append(kId);
+                //    activeInput.InnerText = KnobList[input.connection];
+                //    connections.AppendChild(activeInput);
+                //}
+                //nNode.AppendChild(connections);
+
+
+                nodes.AppendChild(nNode);
+            }
+            root.AppendChild(nodes);
+            StringWriter sw1 = new StringWriter();
+            XmlTextWriter xmlWr0 = new XmlTextWriter(sw1);
+            xmlWr0.Formatting = Formatting.Indented;
+            doc.WriteTo(xmlWr0);
+
+            doc.Save(path);
+
+            sw1.Close();
+            xmlWr0.Close();
+        }
+        #endregion
+    }
 
 }
